@@ -1,6 +1,7 @@
 const Sequelize = require("sequelize");
 const userModel = require("../models/user");
-const {createHash} = require("crypto");
+const { createHash } = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const sequelize = new Sequelize(
   "nodeApi_userDb",
@@ -40,11 +41,12 @@ exports.createUser = function (req, res) {
     })
     .then((result) => {
       //console.log(result);
-      if (!userExist) {
-        res.status(200).json({
-          message: `Добавлен новый пользователь: ${fullName}`
-        });
-      }
+      if (userExist) return;
+
+      res.status(200).json({
+        message: `Добавлен новый пользователь: ${fullName}`
+      });
+
     })
     .catch(err => {
       console.log(err);
@@ -96,11 +98,11 @@ exports.deleteUser = function (req, res) {
       return User.destroy({ where: { id: userid } })
     })
     .then(() => {
-      if (userExist) {
-        res.status(200).json({
-          message: `Пользователь удален`
-        });
-      }
+      if (!userExist) return;
+
+      res.status(200).json({
+        message: `Пользователь удален`
+      });
     })
     .catch(err => {
       console.log(err);
@@ -108,4 +110,95 @@ exports.deleteUser = function (req, res) {
         message: `Сервер вернул ошибку: ${err}`
       });
     });
+};
+
+
+exports.loginUser = function (req, res) {
+  if (!req.body) return res.sendStatus(400);
+  const { email, password } = req.body;
+  // console.log(req.headers.authorization);
+  let userExist = true;
+  hashPassword = createHash('sha256').update(password).digest('hex');
+
+  User.findOne({ where: { email } })
+    .then(user => {
+      if (!user) {
+        userExist = false;
+        return res.status(200).json({
+          message: "Такого пользователя не существует"
+        });
+      };
+      return user
+    })
+    .then(user => {
+      if (!userExist) return;
+      if (hashPassword !== user.password) {
+        return res.status(200).json({
+          message: "Неправильный пароль"
+        });
+      }
+
+      jwt.sign({
+        id: user.id,
+        email: user.email
+      },
+        "BlaBlaBla",
+        { expiresIn: 300 },
+        function (err, token) {
+          if (err) {
+            return res.status(400).json({
+              message: "Ошибка создания токена"
+            });
+          }
+          res.status(200).send({ token });
+        }
+      );
+
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(400).json({
+        message: `Сервер вернул ошибку: ${err}`
+      });
+    });
+};
+
+exports.checkUserToken = function (req, res, next) {
+  if (!req.headers.authorization) return res.status(200).json({
+    message: "Отсутствует токен авторизации"
+  });
+
+  const token = req.headers.authorization.slice(7);
+
+  jwt.verify(token, 'BlaBlaBla', function (err, decoded) {
+    if (err) {
+      return res.status(400).json({
+        message: `Сервер вернул ошибку: ${err}`
+      });
+    }
+    const { id, email } = decoded;
+    let userExist = true;
+
+    User.findOne({ where: { id, email } })
+      .then(user => {
+        if (!user) {
+          userExist = false;
+          return res.status(200).json({
+            message: "Ошибка авторизации"
+          });
+        };
+        return user;
+      })
+      .then(() => {
+        if (userExist) next();
+        console.log('User token is valid');
+      })
+      .catch(err => {
+        console.log(err);
+        res.status(400).json({
+          message: `Сервер вернул ошибку: ${err}`
+        });
+      });
+  });
+  // console.log(token);
 };
