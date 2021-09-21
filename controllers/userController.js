@@ -1,5 +1,6 @@
 const Sequelize = require("sequelize");
 const userModel = require("../models/user");
+const {createHash} = require("crypto");
 
 const sequelize = new Sequelize(
   "nodeApi_userDb",
@@ -15,15 +16,11 @@ const sequelize = new Sequelize(
 const User = sequelize.define("user", userModel);
 
 
-exports.showCreateUser = function (req, res) {
-  res.send("register page soon...");
-};
-
 exports.createUser = function (req, res) {
   if (!req.body) return res.sendStatus(400);
 
   const { fullName, email, dob, password } = req.body;
-
+  hashPassword = createHash('sha256').update(password).digest('hex');
   let userExist = false;
 
   User.findOne({ where: { email: email }, raw: true })
@@ -38,7 +35,7 @@ exports.createUser = function (req, res) {
         fullName,
         email,
         dob,
-        password
+        password: hashPassword
       })
     })
     .then((result) => {
@@ -51,7 +48,9 @@ exports.createUser = function (req, res) {
     })
     .catch(err => {
       console.log(err);
-      res.status(400).json({ message: `Сервер вернул ошибку: ${err}` });
+      res.status(400).json({
+        message: `Сервер вернул ошибку: ${err}`
+      });
     });
 };
 
@@ -59,12 +58,12 @@ exports.editUser = function (req, res) {
   if (!req.body) return res.sendStatus(400);
 
   const { fullName, email, dob, password, id } = req.body;
+  hashPassword = createHash('sha256').update(password).digest('hex');
 
   User.update({
     fullName,
-    email,
     dob,
-    password
+    password: hashPassword
   },
     { where: { id } })
     .then(() => {
@@ -74,7 +73,9 @@ exports.editUser = function (req, res) {
     })
     .catch(err => {
       console.log(err);
-      res.status(400).json({ message: `Сервер вернул ошибку: ${err}` });
+      res.status(400).json({
+        message: `Сервер вернул ошибку: ${err}`
+      });
     });
 
 };
@@ -103,6 +104,8 @@ exports.deleteUser = function (req, res) {
     })
     .catch(err => {
       console.log(err);
-      res.status(400).json({ message: `Сервер вернул ошибку: ${err}` });
+      res.status(400).json({
+        message: `Сервер вернул ошибку: ${err}`
+      });
     });
 };

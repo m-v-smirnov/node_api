@@ -3,7 +3,6 @@ const express = require("express");
 const userRouter = require("./routes/userRouter");
 
 const app = express();
-app.use(express.urlencoded({ extended: false }));
 
 const sequelize = new Sequelize(
   "nodeApi_userDb",
@@ -28,5 +27,5 @@ sequelize.sync().then(()=>{
   console.log(`Ошибка при запуске сервера: ${err}`);
 });
 
-
+app.use(express.urlencoded({ extended: false }));
 app.use("/users",userRouter);
