@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "fusion",
+    "database": "nodeApi_userDb",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "test": {
+    "username": "postgres",
+    "password": "fusion",
+    "database": "db_test",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "postgres",
+    "password": "fusion",
+    "database": "db_production",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  }
+}

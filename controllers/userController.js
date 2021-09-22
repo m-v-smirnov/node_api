@@ -1,60 +1,34 @@
-const Sequelize = require("sequelize");
-const userModel = require("../models/user");
+const db = require('../models/index');
 const { createHash } = require("crypto");
 const jwt = require("jsonwebtoken");
-
-const sequelize = new Sequelize(
-  "nodeApi_userDb",
-  "postgres",
-  "fusion",
-  {
-    dialect: "postgres",
-    define: {
-      timestamps: false
-    }
-  });
-
-const User = sequelize.define("user", userModel);
-
 
 exports.createUser = function (req, res) {
   if (!req.body) return res.sendStatus(400);
 
   const { fullName, email, dob, password } = req.body;
   hashPassword = createHash('sha256').update(password).digest('hex');
-  let userExist = false;
 
-  User.findOne({ where: { email: email }, raw: true })
+  db.User.findOne({ where: { email: email }, raw: true })
     .then(user => {
       if (user) {
-        userExist = true;
-        return res.status(200).json({
-          message: "Пользователь с таким e-mail уже существует"
-        });
+        throw new Error("User with that email already exists");
       }
-      return User.create({
+      db.User.create({
         fullName,
         email,
         dob,
         password: hashPassword
       })
-    })
-    .then((result) => {
-      //console.log(result);
-      if (userExist) return;
-
       res.status(200).json({
-        message: `Добавлен новый пользователь: ${fullName}`
-      });
-
+        message: `A new user has been added: ${fullName}`
+      })
     })
     .catch(err => {
-      console.log(err);
       res.status(400).json({
-        message: `Сервер вернул ошибку: ${err}`
+        message: `${err}`
       });
     });
-};
+}
 
 exports.editUser = function (req, res) {
   if (!req.body) return res.sendStatus(400);
@@ -62,7 +36,7 @@ exports.editUser = function (req, res) {
   const { fullName, email, dob, password, id } = req.body;
   hashPassword = createHash('sha256').update(password).digest('hex');
 
-  User.update({
+  db.User.update({
     fullName,
     dob,
     password: hashPassword
@@ -70,13 +44,12 @@ exports.editUser = function (req, res) {
     { where: { id } })
     .then(() => {
       res.status(200).json({
-        message: `Изменения внесены.`
+        message: `Changes applied`
       });
     })
     .catch(err => {
-      console.log(err);
       res.status(400).json({
-        message: `Сервер вернул ошибку: ${err}`
+        message: `Server send error: ${err}`
       });
     });
 
@@ -85,29 +58,20 @@ exports.editUser = function (req, res) {
 exports.deleteUser = function (req, res) {
   if (!req.body) return res.sendStatus(400);
   const userid = req.body.id;
-  let userExist = true;
 
-  User.findOne({ where: { id: userid } })
+  db.User.findOne({ where: { id: userid } })
     .then(user => {
       if (!user) {
-        userExist = false;
-        return res.status(200).json({
-          message: "Такого пользователя не существует"
-        });
+        throw new Error("This user does not exist");
       };
-      return User.destroy({ where: { id: userid } })
-    })
-    .then(() => {
-      if (!userExist) return;
-
+      db.User.destroy({ where: { id: userid } })
       res.status(200).json({
-        message: `Пользователь удален`
+        message: `User deleted`
       });
     })
     .catch(err => {
-      console.log(err);
       res.status(400).json({
-        message: `Сервер вернул ошибку: ${err}`
+        message: `${err}`
       });
     });
 };
@@ -116,26 +80,16 @@ exports.deleteUser = function (req, res) {
 exports.loginUser = function (req, res) {
   if (!req.body) return res.sendStatus(400);
   const { email, password } = req.body;
-  // console.log(req.headers.authorization);
-  let userExist = true;
   hashPassword = createHash('sha256').update(password).digest('hex');
 
-  User.findOne({ where: { email } })
+  db.User.findOne({ where: { email } })
     .then(user => {
       if (!user) {
-        userExist = false;
-        return res.status(200).json({
-          message: "Такого пользователя не существует"
-        });
+        throw new Error("This user does not exist");
       };
-      return user
-    })
-    .then(user => {
-      if (!userExist) return;
+      
       if (hashPassword !== user.password) {
-        return res.status(200).json({
-          message: "Неправильный пароль"
-        });
+        throw new Error("Invalid password");
       }
 
       jwt.sign({
@@ -143,62 +97,20 @@ exports.loginUser = function (req, res) {
         email: user.email
       },
         "BlaBlaBla",
-        { expiresIn: 300 },
+        { expiresIn: 1000 },
         function (err, token) {
           if (err) {
             return res.status(400).json({
-              message: "Ошибка создания токена"
+              message: "Token creation error"
             });
           }
           res.status(200).send({ token });
         }
       );
-
     })
     .catch(err => {
-      console.log(err);
       res.status(400).json({
-        message: `Сервер вернул ошибку: ${err}`
+        message: `${err}`
       });
     });
-};
-
-exports.checkUserToken = function (req, res, next) {
-  if (!req.headers.authorization) return res.status(200).json({
-    message: "Отсутствует токен авторизации"
-  });
-
-  const token = req.headers.authorization.slice(7);
-
-  jwt.verify(token, 'BlaBlaBla', function (err, decoded) {
-    if (err) {
-      return res.status(400).json({
-        message: `Сервер вернул ошибку: ${err}`
-      });
-    }
-    const { id, email } = decoded;
-    let userExist = true;
-
-    User.findOne({ where: { id, email } })
-      .then(user => {
-        if (!user) {
-          userExist = false;
-          return res.status(200).json({
-            message: "Ошибка авторизации"
-          });
-        };
-        return user;
-      })
-      .then(() => {
-        if (userExist) next();
-        console.log('User token is valid');
-      })
-      .catch(err => {
-        console.log(err);
-        res.status(400).json({
-          message: `Сервер вернул ошибку: ${err}`
-        });
-      });
-  });
-  // console.log(token);
 };
