@@ -1,7 +1,10 @@
+"use strict";
+require('dotenv').config();
 const express = require("express");
 const userRouter = require("./routes/userRouter");
 const authRouter = require("./routes/authRouter");
 const db = require('./models/index');
+
 
 const app = express();
 
@@ -14,7 +17,7 @@ db.sequelize.sync().then(() => {
     }
   });
 }).catch(err => {
-  console.log(`Ошибка при запуске сервера: ${err}`);
+  console.log(`Server starting error: ${err}`);
 });
 
 app.use(express.urlencoded({ extended: false }));

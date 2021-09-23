@@ -1,6 +1,8 @@
+"use strict";
 const db = require('../models/index');
 const jwt = require("jsonwebtoken");
 const { body, validationResult } = require('express-validator');
+const secretKey = process.env.SECRET_KEY;
 
 
 exports.checkUserToken = function (req, res, next) {
@@ -13,8 +15,7 @@ exports.checkUserToken = function (req, res, next) {
     });
   }
 
-
-  jwt.verify(token, 'BlaBlaBla', function (err, decoded) {
+  jwt.verify(token, secretKey, function (err, decoded) {
     if (err) {
       return res.status(400).json({
         message: `Server send error: ${err}`
@@ -27,7 +28,7 @@ exports.checkUserToken = function (req, res, next) {
         if (!user) {
           throw new Error("Authorisation error");
         };
-        req.body.id = id;
+        req.userId = id;
         next();
       })
       .catch(err => {

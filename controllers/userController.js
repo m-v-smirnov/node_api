@@ -1,12 +1,14 @@
+"use strict";
 const db = require('../models/index');
 const { createHash } = require("crypto");
 
 
 exports.editUser = function (req, res) {
-  if (!req.body) return res.sendStatus(400);
+  if (!req.body) return res.status(400).json({ message: "Empty request body" });
 
-  const { fullName, email, dob, password, id } = req.body;
-  hashPassword = createHash('sha256').update(password).digest('hex');
+  const { fullName, dob, password } = req.body;
+  const id = req.userId;
+  let hashPassword = createHash('sha256').update(password).digest('hex');
 
   db.User.update({
     fullName,
@@ -28,15 +30,11 @@ exports.editUser = function (req, res) {
 };
 
 exports.deleteUser = function (req, res) {
-  if (!req.body) return res.sendStatus(400);
-  const userid = req.body.id;
+  if (!req.body) return res.status(400).json({ message: "Empty request body" });
+  const id = req.userId;
 
-  db.User.findOne({ where: { id: userid } })
-    .then(user => {
-      if (!user) {
-        throw new Error("This user does not exist");
-      };
-      db.User.destroy({ where: { id: userid } })
+  db.User.destroy({ where: { id } })
+    .then(() => {
       res.status(200).json({
         message: `User deleted`
       });
