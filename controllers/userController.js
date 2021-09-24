@@ -23,7 +23,7 @@ exports.editUser = function (req, res) {
     })
     .catch(err => {
       res.status(400).json({
-        message: `Server send error: ${err}`
+        message: `Server send error: ${err.message}`
       });
     });
 

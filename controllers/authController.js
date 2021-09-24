@@ -4,23 +4,25 @@ const { createHash } = require("crypto");
 const jwt = require("jsonwebtoken");
 const secretKey = process.env.SECRET_KEY;
 
-async function tokenSign(id, email) {
-  // jwt.sign({
-  //   id,
-  //   email
-  // },
-  //   secretKey,
-  //   { expiresIn: 1000 },
-  //   function (err, token) {
-  //     if (err) {
-  //       throw new Error(`Token creation error: ${err}`);
-  //     }
-  //     //res.status(200).send({ token });
-  //     console.log('first', token);
-  //     return token;
-  //   }
-  // );
-  return jwt.sign({ id, email }, secretKey, { expiresIn: 1000 });
+function tokenSign(id, email) {
+
+  return new Promise((res, rej) => {
+    jwt.sign({
+      id,
+      email
+    },
+      secretKey,
+      { expiresIn: 1000 },
+      function (err, token) {
+        if (err) {
+          rej('Error')
+        }
+        console.log('first', token);
+        res(token);
+      }
+    );
+  })
+  // return jwt.sign({ id, email }, secretKey, { expiresIn: 1000 });
 }
 
 exports.createUser = function (req, res) {
